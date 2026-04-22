@@ -10,6 +10,8 @@ class Settings(BaseSettings):
     port: int = 8000
     session_secret: str = "local-dev-session-secret"
     db_path: str = str(Path("backend") / "data" / "pm.sqlite3")
+    openai_api_key: str = ""
+    openai_model: str = "gpt-5.2"
 
     model_config = SettingsConfigDict(
         env_file=".env",

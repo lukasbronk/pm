@@ -136,3 +136,22 @@ def test_database_contains_user_and_board_rows(client: TestClient, tmp_path: Pat
 
     assert user_count == 1
     assert board_count == 1
+
+
+def test_ai_test_requires_authentication(client: TestClient) -> None:
+    response = client.post("/api/ai/test")
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Authentication required"
+
+
+def test_ai_test_requires_api_key(client: TestClient) -> None:
+    login(client)
+    original_key = settings.openai_api_key
+    settings.openai_api_key = ""
+
+    response = client.post("/api/ai/test")
+
+    settings.openai_api_key = original_key
+    assert response.status_code == 500
+    assert response.json()["detail"] == "OPENAI_API_KEY is not configured."

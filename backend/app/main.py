@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from starlette.middleware.sessions import SessionMiddleware
 
 from backend.app.database import get_or_create_board, save_board
+from backend.app.openai_client import ask_openai
 from backend.app.settings import get_settings
 
 settings = get_settings()
@@ -209,6 +210,32 @@ async def update_board(payload: BoardPayload, request: Request) -> JSONResponse:
             detail=str(exc),
         ) from exc
     return JSONResponse(board)
+
+
+@app.post("/api/ai/test")
+async def ai_test(request: Request) -> JSONResponse:
+    require_username(request)
+
+    try:
+        result = await ask_openai("What is 2+2?", settings)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(exc),
+        ) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="OpenAI request failed.",
+        ) from exc
+
+    return JSONResponse(
+        {
+            "prompt": "What is 2+2?",
+            "model": result["model"],
+            "response": result["response"],
+        }
+    )
 
 
 if FRONTEND_EXPORT_DIR.exists():

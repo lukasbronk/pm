@@ -23,8 +23,8 @@ For the MVP, this will run locally on the machine and is not intended for public
 - Python FastAPI backend, including serving the static NextJS site at /
 - Run everything directly on the local machine
 - Use "uv" as the package manager for python
-- Use OpenRouter for the AI calls. An OPENROUTER_API_KEY is in .env in the project root
-- Use `openai/gpt-oss-120b` as the model
+- Use OpenAI for the AI calls. An OPENAI_API_KEY is in .env in the project root
+- Use `gpt-5.2` as the model
 - Use SQLLite local database for the database, creating a new db if it doesn't exist
 - Start and Stop server scripts for Mac, PC, Linux in scripts/
 

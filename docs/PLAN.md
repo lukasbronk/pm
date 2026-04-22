@@ -144,19 +144,19 @@ Success criteria
 
 ## Part 8: AI Connectivity
 
-- [ ] Add backend configuration for OpenRouter using `OPENROUTER_API_KEY` from the root `.env`.
-- [ ] Implement a small backend client for OpenRouter requests.
-- [ ] Use `openai/gpt-oss-120b` as the configured model.
-- [ ] Add a simple backend test path or test helper that sends a `2+2` prompt.
-- [ ] Handle missing API key and upstream failure with clear errors.
-- [ ] Keep the OpenRouter key server-side only and never expose it to the browser bundle.
+- [x] Add backend configuration for OpenAI using `OPENAI_API_KEY` from the root `.env`.
+- [x] Implement a small backend client for OpenAI requests.
+- [x] Use `gpt-5.2` as the configured model.
+- [x] Add a simple backend test path or test helper that sends a `2+2` prompt.
+- [x] Handle missing API key and upstream failure with clear errors.
+- [x] Keep the OpenAI key server-side only and never expose it to the browser bundle.
 
 Tests
 - Unit tests for request construction and error handling.
 - Manual or integration connectivity check proving the `2+2` response succeeds with a real key.
 
 Success criteria
-- The backend can make a successful OpenRouter request with the configured model.
+- The backend can make a successful OpenAI request with the configured model.
 - Failures are surfaced clearly without crashing the app.
 - The API key is loaded from local environment configuration and stays out of committed files.
 
@@ -172,7 +172,7 @@ Success criteria
 Tests
 - Unit tests for schema validation and malformed AI responses.
 - Unit tests for applying AI-generated card operations to board JSON.
-- Integration tests with mocked OpenRouter responses covering:
+- Integration tests with mocked OpenAI responses covering:
   - Reply only
   - Create card
   - Edit card
