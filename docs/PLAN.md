@@ -187,12 +187,12 @@ Success criteria
 
 ## Part 10: AI Sidebar UI
 
-- [ ] Design and add a sidebar chat interface that fits the existing visual system.
-- [ ] Support session-only conversation history in the frontend and backend request flow.
-- [ ] Send user messages to the backend AI route and render assistant replies.
-- [ ] Refresh or update the board automatically when AI changes are returned.
-- [ ] Surface loading and error states for AI requests.
-- [ ] Keep the sidebar usable on desktop and mobile layouts.
+- [x] Design and add a sidebar chat interface that fits the existing visual system.
+- [x] Support session-only conversation history in the frontend and backend request flow.
+- [x] Send user messages to the backend AI route and render assistant replies.
+- [x] Refresh or update the board automatically when AI changes are returned.
+- [x] Surface loading and error states for AI requests.
+- [x] Keep the sidebar usable on desktop and mobile layouts.
 
 Tests
 - Frontend unit tests for chat rendering and message submission.

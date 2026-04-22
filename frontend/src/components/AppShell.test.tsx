@@ -94,4 +94,49 @@ describe("AppShell", () => {
 
     expect(await screen.findByText("Ready")).toBeInTheDocument();
   });
+
+  it("sends an AI message and updates the board", async () => {
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ authenticated: true, username: "user" }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => initialData,
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          reply: "Added the card.",
+          board: {
+            ...initialData,
+            cards: {
+              ...initialData.cards,
+              "card-new": {
+                id: "card-new",
+                title: "Review budget",
+                details: "Check Q3 numbers.",
+              },
+            },
+            columns: initialData.columns.map((column, index) =>
+              index === 0
+                ? { ...column, cardIds: [...column.cardIds, "card-new"] }
+                : column
+            ),
+          },
+        }),
+      });
+
+    render(<AppShell />);
+
+    await userEvent.type(
+      await screen.findByPlaceholderText(/ask the ai to update cards/i),
+      "Add a card"
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Send To AI" }));
+
+    expect(await screen.findByText("Added the card.")).toBeInTheDocument();
+    expect(screen.getByText("Review budget")).toBeInTheDocument();
+  });
 });

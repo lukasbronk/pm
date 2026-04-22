@@ -1,12 +1,18 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
+import { AiSidebar } from "@/components/AiSidebar";
 import { KanbanBoard } from "@/components/KanbanBoard";
 import { initialData, type BoardData } from "@/lib/kanban";
 
 type SessionState = {
   authenticated: boolean;
   username: string | null;
+};
+
+type ChatMessage = {
+  role: "user" | "assistant";
+  content: string;
 };
 
 const initialSessionState: SessionState = {
@@ -23,6 +29,9 @@ export const AppShell = () => {
   const [isLoadingBoard, setIsLoadingBoard] = useState(false);
   const [isSavingBoard, setIsSavingBoard] = useState(false);
   const [boardError, setBoardError] = useState<string | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [isSendingAi, setIsSendingAi] = useState(false);
 
   useEffect(() => {
     const loadSession = async () => {
@@ -39,6 +48,7 @@ export const AppShell = () => {
   useEffect(() => {
     if (!session?.authenticated) {
       setBoard(null);
+      setMessages([]);
       return;
     }
 
@@ -101,6 +111,8 @@ export const AppShell = () => {
     setSession(initialSessionState);
     setBoard(null);
     setBoardError(null);
+    setMessages([]);
+    setAiError(null);
   };
 
   const handleBoardChange = async (nextBoard: BoardData) => {
@@ -127,6 +139,47 @@ export const AppShell = () => {
       setBoardError("Could not save the board.");
     } finally {
       setIsSavingBoard(false);
+    }
+  };
+
+  const handleSendAiMessage = async (message: string) => {
+    setAiError(null);
+    setIsSendingAi(true);
+    setMessages((prev) => [...prev, { role: "user", content: message }]);
+
+    try {
+      const response = await fetch("/api/ai/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ message }),
+      });
+
+      const data = (await response.json()) as {
+        reply?: string;
+        board?: BoardData;
+        detail?: string;
+      };
+
+      if (!response.ok) {
+        setAiError(data.detail ?? "Could not send the AI request.");
+        setMessages((prev) => prev.slice(0, -1));
+        return;
+      }
+
+      if (data.board) {
+        setBoard(data.board);
+      }
+
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: data.reply ?? "No response returned." },
+      ]);
+    } catch {
+      setAiError("Could not send the AI request.");
+      setMessages((prev) => prev.slice(0, -1));
+    } finally {
+      setIsSendingAi(false);
     }
   };
 
@@ -221,6 +274,13 @@ export const AppShell = () => {
       onBoardChange={handleBoardChange}
       isSaving={isSavingBoard}
       error={boardError}
-    />
+    >
+      <AiSidebar
+        messages={messages}
+        isSending={isSendingAi}
+        error={aiError}
+        onSend={handleSendAiMessage}
+      />
+    </KanbanBoard>
   );
 };
