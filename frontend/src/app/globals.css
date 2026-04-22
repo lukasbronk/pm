@@ -32,3 +32,25 @@ body {
 .font-display {
   font-family: "Trebuchet MS", "Avenir Next", "Segoe UI", sans-serif;
 }
+
+@keyframes title-shimmer {
+  0% {
+    box-shadow: 0 0 0 0 rgba(236, 173, 10, 0.2);
+    background-position: 200% 0;
+  }
+  100% {
+    box-shadow: 0 0 0 8px rgba(236, 173, 10, 0);
+    background-position: -200% 0;
+  }
+}
+
+.title-shimmer {
+  background-image: linear-gradient(
+    110deg,
+    rgba(255, 255, 255, 0) 20%,
+    rgba(236, 173, 10, 0.14) 45%,
+    rgba(255, 255, 255, 0) 70%
+  );
+  background-size: 200% 100%;
+  animation: title-shimmer 650ms ease-out 1;
+}

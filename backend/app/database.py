@@ -141,11 +141,12 @@ def validate_board_payload(board: dict[str, Any]) -> None:
     columns = board.get("columns")
     cards = board.get("cards")
 
-    if not isinstance(columns, list) or len(columns) != 5:
-        raise ValueError("Board must contain exactly 5 columns.")
+    if not isinstance(columns, list) or len(columns) == 0:
+        raise ValueError("Board must contain at least 1 column.")
     if not isinstance(cards, dict):
         raise ValueError("Board cards must be an object.")
 
+    seen_column_ids: set[str] = set()
     seen_card_ids: set[str] = set()
 
     for column in columns:
@@ -157,6 +158,9 @@ def validate_board_payload(board: dict[str, Any]) -> None:
             raise ValueError("Column id and title must be strings.")
         if not isinstance(column["cardIds"], list):
             raise ValueError("Column cardIds must be an array.")
+        if column["id"] in seen_column_ids:
+            raise ValueError("Column ids must be unique.")
+        seen_column_ids.add(column["id"])
 
         for card_id in column["cardIds"]:
             if not isinstance(card_id, str):
@@ -233,9 +237,9 @@ def apply_card_operations(board: dict[str, Any], operations: list[dict[str, Any]
             if not card:
                 raise ValueError(f"Card not found: {card_id}")
 
-            if "title" in operation:
+            if isinstance(operation.get("title"), str):
                 card["title"] = operation["title"]
-            if "details" in operation:
+            if isinstance(operation.get("details"), str):
                 card["details"] = operation["details"]
             continue
 

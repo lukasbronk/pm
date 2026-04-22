@@ -314,5 +314,11 @@ async def ai_chat(payload: AIChatPayload, request: Request) -> JSONResponse:
     )
 
 
+@app.get("/api/ai/history")
+async def ai_history(request: Request) -> JSONResponse:
+    require_username(request)
+    return JSONResponse({"messages": get_chat_history(request)})
+
+
 if FRONTEND_EXPORT_DIR.exists():
     app.mount("/", StaticFiles(directory=FRONTEND_EXPORT_DIR, html=True), name="frontend")

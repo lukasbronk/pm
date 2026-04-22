@@ -77,6 +77,33 @@ export const AppShell = () => {
     void loadBoard();
   }, [session]);
 
+  useEffect(() => {
+    if (!session?.authenticated) {
+      return;
+    }
+
+    const loadHistory = async () => {
+      try {
+        const response = await fetch("/api/ai/history", {
+          credentials: "same-origin",
+        });
+
+        if (!response.ok) {
+          return;
+        }
+
+        const data = (await response.json()) as { messages?: ChatMessage[] };
+        if (Array.isArray(data.messages)) {
+          setMessages(data.messages);
+        }
+      } catch {
+        setMessages([]);
+      }
+    };
+
+    void loadHistory();
+  }, [session]);
+
   const handleLogin = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setIsSubmitting(true);

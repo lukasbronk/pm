@@ -56,6 +56,7 @@ test("moves a card between columns", async ({ page }) => {
 test("sends an AI request from the sidebar", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Sign In" }).click();
+  await page.getByRole("button", { name: "AI Helper" }).click();
   await page.getByPlaceholder("Ask the AI to update cards or summarize the board.").fill(
     "Add a new card to Backlog called Review budget with details Check Q3 numbers."
   );

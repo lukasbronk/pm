@@ -59,7 +59,7 @@ async def ask_openai(
     if client is not None:
         response = await client.post(OPENAI_RESPONSES_URL, json=payload, headers=headers)
     else:
-        async with httpx.AsyncClient(timeout=30.0) as async_client:
+        async with httpx.AsyncClient(timeout=90.0) as async_client:
             response = await async_client.post(
                 OPENAI_RESPONSES_URL,
                 json=payload,
@@ -117,7 +117,7 @@ async def ask_openai_json(
     if client is not None:
         response = await client.post(OPENAI_RESPONSES_URL, json=payload, headers=headers)
     else:
-        async with httpx.AsyncClient(timeout=30.0) as async_client:
+        async with httpx.AsyncClient(timeout=90.0) as async_client:
             response = await async_client.post(
                 OPENAI_RESPONSES_URL,
                 json=payload,

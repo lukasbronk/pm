@@ -133,3 +133,44 @@ async def test_run_board_ai_rejects_invalid_operation() -> None:
                 settings=settings,
                 client=client,
             )
+
+
+@pytest.mark.anyio
+async def test_run_board_ai_rejects_create_with_null_card() -> None:
+    async def handler(_: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "model": "gpt-5.2",
+                "output_text": """
+                {
+                  "reply":"Done.",
+                  "operations":[
+                    {
+                      "action":"create",
+                      "column_id":"col-backlog",
+                      "to_column_id":null,
+                      "position":null,
+                      "card_id":null,
+                      "title":null,
+                      "details":null,
+                      "card":null
+                    }
+                  ]
+                }
+                """,
+            },
+        )
+
+    transport = httpx.MockTransport(handler)
+    settings = Settings(openai_api_key="test-key")
+
+    async with httpx.AsyncClient(transport=transport) as client:
+        with pytest.raises(ValueError, match="Create operations require column_id and card."):
+            await run_board_ai(
+                board=DEFAULT_BOARD,
+                user_message="Add a card",
+                conversation_history=[],
+                settings=settings,
+                client=client,
+            )

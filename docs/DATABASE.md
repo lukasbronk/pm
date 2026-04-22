@@ -128,7 +128,8 @@ It avoids:
 
 Before saving `board_json`, the backend should validate:
 
-- exactly 5 columns for the MVP
+- at least 1 column
+- column ids are unique
 - each column has `id`, `title`, and `cardIds`
 - each card has `id`, `title`, and `details`
 - every `cardId` referenced by a column exists in `cards`

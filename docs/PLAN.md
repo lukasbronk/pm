@@ -1,6 +1,20 @@
 # Project Plan
 
-This document breaks the work into implementation parts with explicit substeps, tests, and success criteria. The project is explicitly local-only for an experimental internal MVP and is not being prepared for public deployment. Part 1 is complete when this plan and `frontend/AGENTS.md` are reviewed and approved by the user.
+This document breaks the work into implementation parts with explicit substeps, tests, and success criteria. The project is explicitly local-only for an experimental internal MVP and is not being prepared for public deployment.
+
+## Current Decisions
+
+- The app runs directly on the local machine, not in Docker.
+- FastAPI serves both the API and the built Next.js static export.
+- Authentication uses a signed local session cookie with the fixed credentials `user` / `password`.
+- SQLite stores one board per user as a single JSON document.
+- AI calls use OpenAI, not OpenRouter.
+- The configured model is `gpt-5.2`.
+- AI requests use the OpenAI Responses API with structured JSON output for board-aware actions.
+- AI is restricted to card actions only: create, edit, move, and delete.
+- AI chat history is session-only, stored in the backend session and restored after refresh.
+- The AI UI is a bottom-right expandable chat widget with its own internal scroll area.
+- OpenAI requests currently use a 90 second backend timeout to better tolerate larger multi-card planning prompts.
 
 ## Part 1: Plan
 
@@ -8,7 +22,7 @@ This document breaks the work into implementation parts with explicit substeps, 
 - [x] Resolve open architecture decisions needed before scaffolding.
 - [x] Expand this document into detailed checklists with tests and success criteria.
 - [x] Create [frontend/AGENTS.md](/Users/lukasbronk/git/pm/frontend/AGENTS.md) describing the existing frontend app.
-- [ ] Get explicit user approval before starting Part 2.
+- [x] Get explicit user approval before starting Part 2.
 
 Tests
 - Review plan for consistency with the business requirements and technical decisions.
@@ -19,10 +33,12 @@ Success criteria
 - Architecture defaults are documented:
   - Signed cookie auth for the MVP
   - Static client assets built from Next.js and served by FastAPI locally
-  - Five initial fixed but renamable columns
-  - AI can create, edit, and move cards only
+  - Five initial columns, with user-editable column count and titles
+  - AI can create, edit, move, and delete cards
   - AI chat history is session-only
   - The app runs directly on the local machine, not in Docker
+  - OpenAI is the AI provider
+  - `gpt-5.2` is the configured AI model
 - User approves the plan before implementation begins.
 
 ## Part 2: Local Scaffolding
@@ -53,7 +69,7 @@ Success criteria
 - [x] Configure the frontend build output so FastAPI can serve the compiled client assets.
 - [x] Replace the example HTML at `/` with the current Kanban demo UI.
 - [x] Ensure asset paths work correctly when served by FastAPI.
-- [x] Keep the current five-column demo behavior intact after packaging.
+- [x] Keep the current demo board behavior intact after packaging.
 - [x] Update test setup for the integrated app path as needed.
 
 Tests
@@ -94,11 +110,12 @@ Success criteria
 - [x] Define how board state is stored as JSON.
 - [x] Decide how seed data is created for a new user board.
 - [x] Document schema, constraints, and rationale in `docs/`.
-- [ ] Get explicit user sign-off on the database approach before implementation.
+- [x] Get explicit user sign-off on the database approach before implementation.
 
 Tests
 - Schema review for support of current MVP and future multi-user expansion.
 - Validate that the schema can represent five columns and arbitrary cards without extra relational complexity.
+- Validate that the schema can represent a variable number of columns and arbitrary cards without extra relational complexity.
 
 Success criteria
 - The documented schema is simple, SQLite-friendly, and supports future multi-user growth.
@@ -159,6 +176,7 @@ Success criteria
 - The backend can make a successful OpenAI request with the configured model.
 - Failures are surfaced clearly without crashing the app.
 - The API key is loaded from local environment configuration and stays out of committed files.
+- The backend exposes enough error detail during local development to diagnose upstream request failures.
 
 ## Part 9: AI Board-Aware Structured Output
 
@@ -184,6 +202,7 @@ Success criteria
 - Every AI response is schema-validated before use.
 - AI can respond conversationally and optionally update cards.
 - Invalid or out-of-scope AI output does not corrupt the board.
+- Invalid AI card operations fail cleanly with validation errors instead of Python runtime exceptions.
 
 ## Part 10: AI Sidebar UI
 
@@ -204,3 +223,5 @@ Success criteria
 - AI card updates appear in the Kanban UI automatically.
 - The final UI remains coherent, responsive, and consistent with the project color scheme.
 - The final app remains intentionally local-only and not hardened as a public deployment target.
+- The AI chat widget has its own internal scroll area and can be opened or collapsed from the bottom right of the page.
+- Session-only AI chat history is restored after page refresh.

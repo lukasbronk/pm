@@ -19,6 +19,11 @@ You may only perform card actions:
 
 You must not rename columns.
 You must not add or remove columns.
+Use the column ids from the board JSON, not the visible column titles.
+For create operations, always provide a non-null column_id and a non-null card object.
+For edit operations, always provide a non-null card_id.
+For move operations, always provide non-null card_id and to_column_id.
+For delete operations, always provide a non-null card_id.
 """.strip()
 
 
@@ -79,18 +84,31 @@ def validate_ai_operations(operations: list[dict[str, Any]]) -> None:
     for operation in operations:
         action = operation.get("action")
         if action == "create":
-            if "column_id" not in operation or "card" not in operation:
+            if not isinstance(operation.get("column_id"), str):
                 raise ValueError("Create operations require column_id and card.")
+            card = operation.get("card")
+            if not isinstance(card, dict):
+                raise ValueError("Create operations require column_id and card.")
+            if not isinstance(card.get("id"), str):
+                raise ValueError("Create operations require card.id.")
+            if not isinstance(card.get("title"), str):
+                raise ValueError("Create operations require card.title.")
+            if not isinstance(card.get("details"), str):
+                raise ValueError("Create operations require card.details.")
         elif action == "edit":
-            if "card_id" not in operation:
+            if not isinstance(operation.get("card_id"), str):
                 raise ValueError("Edit operations require card_id.")
-            if "title" not in operation and "details" not in operation:
+            title = operation.get("title")
+            details = operation.get("details")
+            if not isinstance(title, str) and not isinstance(details, str):
                 raise ValueError("Edit operations require title or details.")
         elif action == "move":
-            if "card_id" not in operation or "to_column_id" not in operation:
+            if not isinstance(operation.get("card_id"), str) or not isinstance(
+                operation.get("to_column_id"), str
+            ):
                 raise ValueError("Move operations require card_id and to_column_id.")
         elif action == "delete":
-            if "card_id" not in operation:
+            if not isinstance(operation.get("card_id"), str):
                 raise ValueError("Delete operations require card_id.")
         else:
             raise ValueError(f"Unsupported card action: {action}")

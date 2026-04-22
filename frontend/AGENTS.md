@@ -19,13 +19,14 @@ This document describes the existing `frontend/` app so future work starts from 
 ## Current Behavior
 
 - The home page at `/` renders `KanbanBoard`.
-- The board starts with five columns:
+- The board starts with five seeded columns:
   - Backlog
   - Discovery
   - In Progress
   - Review
   - Done
 - Columns can be renamed inline.
+- Columns can be added and removed.
 - Cards can be added to a column.
 - Cards can be removed.
 - Cards can be dragged within a column or between columns.
@@ -50,7 +51,7 @@ This document describes the existing `frontend/` app so future work starts from 
 
 ## Conventions To Preserve
 
-- Keep the five-column Kanban structure for the MVP.
+- Keep the seeded board simple, but allow the user to change the number of columns.
 - Preserve the current color palette defined in `globals.css`.
 - Prefer simple client components and direct state transitions over extra abstraction.
 - Keep interactions testable with stable labels and `data-testid` usage where already present.

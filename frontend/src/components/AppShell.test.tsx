@@ -40,6 +40,10 @@ describe("AppShell", () => {
       .mockResolvedValueOnce({
         ok: true,
         json: async () => initialData,
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ messages: [] }),
       });
 
     render(<AppShell />);
@@ -59,6 +63,10 @@ describe("AppShell", () => {
       .mockResolvedValueOnce({
         ok: true,
         json: async () => initialData,
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ messages: [] }),
       })
       .mockResolvedValueOnce({
         ok: true,
@@ -88,6 +96,10 @@ describe("AppShell", () => {
             index === 0 ? { ...column, title: "Ready" } : column
           ),
         }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ messages: [] }),
       });
 
     render(<AppShell />);
@@ -104,6 +116,10 @@ describe("AppShell", () => {
       .mockResolvedValueOnce({
         ok: true,
         json: async () => initialData,
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ messages: [] }),
       })
       .mockResolvedValueOnce({
         ok: true,
@@ -130,6 +146,7 @@ describe("AppShell", () => {
 
     render(<AppShell />);
 
+    await userEvent.click(await screen.findByRole("button", { name: "AI Helper" }));
     await userEvent.type(
       await screen.findByPlaceholderText(/ask the ai to update cards/i),
       "Add a card"
@@ -138,5 +155,51 @@ describe("AppShell", () => {
 
     expect(await screen.findByText("Added the card.")).toBeInTheDocument();
     expect(screen.getByText("Review budget")).toBeInTheDocument();
+  });
+
+  it("shows an AI thinking state while waiting for the response", async () => {
+    let resolveChat: ((value: { ok: boolean; json: () => Promise<{ reply: string; board: typeof initialData }> }) => void) | null = null;
+
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ authenticated: true, username: "user" }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => initialData,
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ messages: [] }),
+      })
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveChat = resolve;
+          })
+      );
+
+    render(<AppShell />);
+
+    await userEvent.click(await screen.findByRole("button", { name: "AI Helper" }));
+    await userEvent.type(
+      await screen.findByPlaceholderText(/ask the ai to update cards/i),
+      "Add a card"
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Send To AI" }));
+
+    expect(await screen.findByText("Thinking...")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Thinking" })).toBeDisabled();
+
+    resolveChat?.({
+      ok: true,
+      json: async () => ({
+        reply: "Done.",
+        board: initialData,
+      }),
+    });
+
+    expect(await screen.findByText("Done.")).toBeInTheDocument();
   });
 });

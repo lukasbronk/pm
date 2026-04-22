@@ -93,7 +93,7 @@ def test_board_is_created_automatically_and_db_file_exists(
 
     assert response.status_code == 200
     board = response.json()
-    assert len(board["columns"]) == 5
+    assert len(board["columns"]) >= 1
     assert "card-1" in board["cards"]
     assert (tmp_path / "pm.sqlite3").exists()
 
@@ -115,14 +115,25 @@ def test_board_update_persists_for_authenticated_user(client: TestClient) -> Non
 def test_invalid_board_payload_is_rejected(client: TestClient) -> None:
     login(client)
     invalid_board = {
-        "columns": [{"id": "col-1", "title": "Only One", "cardIds": []}],
+        "columns": [],
         "cards": {},
     }
 
     response = client.put("/api/board", json=invalid_board)
 
     assert response.status_code == 400
-    assert response.json()["detail"] == "Board must contain exactly 5 columns."
+    assert response.json()["detail"] == "Board must contain at least 1 column."
+
+
+def test_variable_column_count_is_accepted(client: TestClient) -> None:
+    login(client)
+    board = client.get("/api/board").json()
+    board["columns"].append({"id": "col-extra", "title": "Extra", "cardIds": []})
+
+    response = client.put("/api/board", json=board)
+
+    assert response.status_code == 200
+    assert len(response.json()["columns"]) == 6
 
 
 def test_database_contains_user_and_board_rows(client: TestClient, tmp_path: Path) -> None:
@@ -159,6 +170,13 @@ def test_ai_test_requires_api_key(client: TestClient) -> None:
 
 def test_ai_chat_requires_authentication(client: TestClient) -> None:
     response = client.post("/api/ai/chat", json={"message": "Hello"})
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Authentication required"
+
+
+def test_ai_history_requires_authentication(client: TestClient) -> None:
+    response = client.get("/api/ai/history")
 
     assert response.status_code == 401
     assert response.json()["detail"] == "Authentication required"
@@ -232,4 +250,31 @@ def test_ai_chat_applies_board_changes_and_stores_history(
     assert captured_history[-2:] == [
         {"role": "user", "content": "Add a new backlog card"},
         {"role": "assistant", "content": "I added the card."},
+    ]
+
+
+def test_ai_history_returns_session_messages(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    login(client)
+
+    async def fake_ask_openai_json(*args, **kwargs):  # type: ignore[no-untyped-def]
+        return {
+            "model": "gpt-5.2",
+            "data": {
+                "reply": "Done.",
+                "operations": [],
+            },
+        }
+
+    monkeypatch.setattr("backend.app.ai.ask_openai_json", fake_ask_openai_json)
+    response = client.post("/api/ai/chat", json={"message": "Summarize the board"})
+    assert response.status_code == 200
+
+    history_response = client.get("/api/ai/history")
+    assert history_response.status_code == 200
+    assert history_response.json()["messages"][-2:] == [
+        {"role": "user", "content": "Summarize the board"},
+        {"role": "assistant", "content": "Done."},
     ]

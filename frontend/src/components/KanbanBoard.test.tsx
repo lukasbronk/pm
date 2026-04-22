@@ -14,7 +14,7 @@ const ControlledBoard = () => {
 };
 
 describe("KanbanBoard", () => {
-  it("renders five columns", () => {
+  it("renders the seeded columns", () => {
     render(<KanbanBoard board={cloneBoard()} />);
     expect(screen.getAllByTestId(/column-/i)).toHaveLength(5);
   });
@@ -51,5 +51,28 @@ describe("KanbanBoard", () => {
     await userEvent.click(deleteButton);
 
     expect(within(column).queryByText("New card")).not.toBeInTheDocument();
+  });
+
+  it("adds and removes a column", async () => {
+    render(<ControlledBoard />);
+
+    await userEvent.click(screen.getByRole("button", { name: "Add Column" }));
+    expect(screen.getAllByTestId(/column-/i)).toHaveLength(6);
+
+    const newColumnTitle = document.activeElement as HTMLInputElement;
+    expect(newColumnTitle).toHaveFocus();
+    expect(newColumnTitle).toHaveAttribute("placeholder", "What am I called?");
+    expect(newColumnTitle).toHaveValue("");
+    const newColumn = newColumnTitle.closest("section");
+    expect(newColumn).not.toBeNull();
+    expect(newColumnTitle).toHaveClass("title-shimmer");
+
+    await userEvent.click(
+      within(newColumn as HTMLElement).getByRole("button", {
+        name: /delete\s+column/i,
+      })
+    );
+
+    expect(screen.getAllByTestId(/column-/i)).toHaveLength(5);
   });
 });

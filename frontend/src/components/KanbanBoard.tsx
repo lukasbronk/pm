@@ -35,6 +35,7 @@ export const KanbanBoard = ({
   children,
 }: KanbanBoardProps) => {
   const [activeCardId, setActiveCardId] = useState<string | null>(null);
+  const [freshColumnId, setFreshColumnId] = useState<string | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -63,6 +64,10 @@ export const KanbanBoard = ({
   };
 
   const handleRenameColumn = (columnId: string, title: string) => {
+    if (columnId === freshColumnId && title.trim().length > 0) {
+      setFreshColumnId(null);
+    }
+
     onBoardChange?.({
       ...board,
       columns: board.columns.map((column) =>
@@ -104,6 +109,44 @@ export const KanbanBoard = ({
     });
   };
 
+  const handleAddColumn = () => {
+    const id = createId("col");
+    setFreshColumnId(id);
+    onBoardChange?.({
+      ...board,
+      columns: [...board.columns, { id, title: "", cardIds: [] }],
+    });
+  };
+
+  const handleDeleteColumn = (columnId: string) => {
+    if (board.columns.length <= 1) {
+      return;
+    }
+
+    const sourceIndex = board.columns.findIndex((column) => column.id === columnId);
+    if (sourceIndex === -1) {
+      return;
+    }
+
+    const targetIndex = sourceIndex === 0 ? 1 : sourceIndex - 1;
+    const targetColumn = board.columns[targetIndex];
+    const sourceColumn = board.columns[sourceIndex];
+
+    onBoardChange?.({
+      ...board,
+      columns: board.columns
+        .filter((column) => column.id !== columnId)
+        .map((column) =>
+          column.id === targetColumn.id
+            ? {
+                ...column,
+                cardIds: [...column.cardIds, ...sourceColumn.cardIds],
+              }
+            : column
+        ),
+    });
+  };
+
   const activeCard = activeCardId ? cardsById[activeCardId] : null;
 
   return (
@@ -111,7 +154,7 @@ export const KanbanBoard = ({
       <div className="pointer-events-none absolute left-0 top-0 h-[420px] w-[420px] -translate-x-1/3 -translate-y-1/3 rounded-full bg-[radial-gradient(circle,_rgba(32,157,215,0.25)_0%,_rgba(32,157,215,0.05)_55%,_transparent_70%)]" />
       <div className="pointer-events-none absolute bottom-0 right-0 h-[520px] w-[520px] translate-x-1/4 translate-y-1/4 rounded-full bg-[radial-gradient(circle,_rgba(117,57,145,0.18)_0%,_rgba(117,57,145,0.05)_55%,_transparent_75%)]" />
 
-      <main className="relative mx-auto flex min-h-screen max-w-[1500px] flex-col gap-10 px-6 pb-16 pt-12">
+      <main className="relative mx-auto flex min-h-screen max-w-[1680px] flex-col gap-10 px-6 pb-16 pt-12">
         <header className="flex flex-col gap-6 rounded-[32px] border border-[var(--stroke)] bg-white/80 p-8 shadow-[var(--shadow)] backdrop-blur">
           <div className="flex flex-wrap items-start justify-between gap-6">
             <div>
@@ -122,8 +165,9 @@ export const KanbanBoard = ({
                 Kanban Studio
               </h1>
               <p className="mt-3 max-w-xl text-sm leading-6 text-[var(--gray-text)]">
-                Keep momentum visible. Rename columns, drag cards between stages,
-                and capture quick notes without getting buried in settings.
+                Keep momentum visible. Add or remove columns, drag cards between
+                stages, and capture quick notes without getting buried in
+                settings.
               </p>
             </div>
             <div className="rounded-2xl border border-[var(--stroke)] bg-[var(--surface)] px-5 py-4">
@@ -141,7 +185,7 @@ export const KanbanBoard = ({
                 </button>
               ) : (
                 <p className="mt-2 text-lg font-semibold text-[var(--primary-blue)]">
-                  One board. Five columns. Zero clutter.
+                  One board. Flexible columns. Zero clutter.
                 </p>
               )}
             </div>
@@ -164,28 +208,41 @@ export const KanbanBoard = ({
                 {column.title}
               </div>
             ))}
+            <button
+              type="button"
+              onClick={handleAddColumn}
+              className="rounded-full border border-dashed border-[var(--primary-blue)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--primary-blue)] transition hover:bg-[var(--primary-blue)] hover:text-white"
+            >
+              Add Column
+            </button>
           </div>
         </header>
 
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="relative">
           <DndContext
             sensors={sensors}
             collisionDetection={closestCorners}
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
           >
-            <section className="grid gap-6 lg:grid-cols-5">
+            <div className="-mx-2 overflow-x-auto pb-4">
+              <section className="flex min-w-max gap-6 px-2">
               {board.columns.map((column) => (
-                <KanbanColumn
-                  key={column.id}
-                  column={column}
-                  cards={column.cardIds.map((cardId) => board.cards[cardId])}
-                  onRename={handleRenameColumn}
-                  onAddCard={handleAddCard}
-                  onDeleteCard={handleDeleteCard}
-                />
+                <div key={column.id} className="w-[min(280px,calc((100vw-8rem)/5))] min-w-[240px] max-w-[280px] flex-none">
+                  <KanbanColumn
+                    column={column}
+                    cards={column.cardIds.map((cardId) => board.cards[cardId])}
+                    onRename={handleRenameColumn}
+                    onAddCard={handleAddCard}
+                    onDeleteCard={handleDeleteCard}
+                    onDeleteColumn={handleDeleteColumn}
+                    canDeleteColumn={board.columns.length > 1}
+                    autoFocusTitle={column.id === freshColumnId}
+                  />
+                </div>
               ))}
-            </section>
+              </section>
+            </div>
             <DragOverlay>
               {activeCard ? (
                 <div className="w-[260px]">
