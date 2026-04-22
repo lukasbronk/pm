@@ -15,7 +15,15 @@ import { KanbanColumn } from "@/components/KanbanColumn";
 import { KanbanCardPreview } from "@/components/KanbanCardPreview";
 import { createId, initialData, moveCard, type BoardData } from "@/lib/kanban";
 
-export const KanbanBoard = () => {
+type KanbanBoardProps = {
+  username?: string;
+  onLogout?: () => void;
+};
+
+export const KanbanBoard = ({
+  username = "user",
+  onLogout,
+}: KanbanBoardProps) => {
   const [board, setBoard] = useState<BoardData>(() => initialData);
   const [activeCardId, setActiveCardId] = useState<string | null>(null);
 
@@ -113,11 +121,22 @@ export const KanbanBoard = () => {
             </div>
             <div className="rounded-2xl border border-[var(--stroke)] bg-[var(--surface)] px-5 py-4">
               <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[var(--gray-text)]">
-                Focus
+                Signed In
               </p>
-              <p className="mt-2 text-lg font-semibold text-[var(--primary-blue)]">
-                One board. Five columns. Zero clutter.
-              </p>
+              <p className="mt-2 text-lg font-semibold text-[var(--primary-blue)]">{username}</p>
+              {onLogout ? (
+                <button
+                  type="button"
+                  onClick={onLogout}
+                  className="mt-3 rounded-full border border-[var(--stroke)] px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--navy-dark)] transition hover:border-[var(--primary-blue)] hover:text-[var(--primary-blue)]"
+                >
+                  Log Out
+                </button>
+              ) : (
+                <p className="mt-2 text-lg font-semibold text-[var(--primary-blue)]">
+                  One board. Five columns. Zero clutter.
+                </p>
+              )}
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-4">
