@@ -6,8 +6,9 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from starlette.middleware.sessions import SessionMiddleware
 
+from backend.app.ai import run_board_ai
 from backend.app.database import get_or_create_board, save_board
-from backend.app.openai_client import ask_openai
+from backend.app.openai_client import OpenAIRequestError, ask_openai
 from backend.app.settings import get_settings
 
 settings = get_settings()
@@ -24,6 +25,7 @@ FRONTEND_EXPORT_DIR = PROJECT_ROOT / "frontend" / "out"
 SESSION_USER_KEY = "user"
 VALID_USERNAME = "user"
 VALID_PASSWORD = "password"
+CHAT_HISTORY_KEY = "chat_history"
 
 
 class LoginPayload(BaseModel):
@@ -34,6 +36,10 @@ class LoginPayload(BaseModel):
 class BoardPayload(BaseModel):
     columns: list[dict]
     cards: dict
+
+
+class AIChatPayload(BaseModel):
+    message: str
 
 
 def is_authenticated(request: Request) -> bool:
@@ -48,6 +54,23 @@ def require_username(request: Request) -> str:
             detail="Authentication required",
         )
     return str(username)
+
+
+def get_chat_history(request: Request) -> list[dict[str, str]]:
+    history = request.session.get(CHAT_HISTORY_KEY, [])
+    if not isinstance(history, list):
+        return []
+    return [
+        item
+        for item in history
+        if isinstance(item, dict)
+        and isinstance(item.get("role"), str)
+        and isinstance(item.get("content"), str)
+    ]
+
+
+def set_chat_history(request: Request, history: list[dict[str, str]]) -> None:
+    request.session[CHAT_HISTORY_KEY] = history[-20:]
 
 
 def render_placeholder_html() -> str:
@@ -223,10 +246,15 @@ async def ai_test(request: Request) -> JSONResponse:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(exc),
         ) from exc
+    except OpenAIRequestError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"OpenAI request failed: {exc}",
+        ) from exc
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="OpenAI request failed.",
+            detail=f"OpenAI request failed: {exc!r}",
         ) from exc
 
     return JSONResponse(
@@ -234,6 +262,54 @@ async def ai_test(request: Request) -> JSONResponse:
             "prompt": "What is 2+2?",
             "model": result["model"],
             "response": result["response"],
+        }
+    )
+
+
+@app.post("/api/ai/chat")
+async def ai_chat(payload: AIChatPayload, request: Request) -> JSONResponse:
+    username = require_username(request)
+    board = get_or_create_board(username, settings)
+    history = get_chat_history(request)
+
+    try:
+        result = await run_board_ai(
+            board=board,
+            user_message=payload.message,
+            conversation_history=history,
+            settings=settings,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+    except OpenAIRequestError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"OpenAI request failed: {exc}",
+        ) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"OpenAI request failed: {exc!r}",
+        ) from exc
+
+    updated_board = save_board(username, result["board"], settings)
+    history.extend(
+        [
+            {"role": "user", "content": payload.message},
+            {"role": "assistant", "content": result["reply"]},
+        ]
+    )
+    set_chat_history(request, history)
+
+    return JSONResponse(
+        {
+            "model": result["model"],
+            "reply": result["reply"],
+            "operations": result["operations"],
+            "board": updated_board,
         }
     )
 

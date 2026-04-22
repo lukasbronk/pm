@@ -162,12 +162,12 @@ Success criteria
 
 ## Part 9: AI Board-Aware Structured Output
 
-- [ ] Define the structured output schema for AI chat responses.
-- [ ] Include the current board JSON, the user message, and session chat history in each AI request.
-- [ ] Restrict AI-generated board changes to card create, edit, move, and delete operations only.
-- [ ] Validate and normalize AI responses before applying them.
-- [ ] Apply valid board mutations through the same persistence path as manual frontend edits.
-- [ ] Return both assistant text and optional board updates to the frontend.
+- [x] Define the structured output schema for AI chat responses.
+- [x] Include the current board JSON, the user message, and session chat history in each AI request.
+- [x] Restrict AI-generated board changes to card create, edit, move, and delete operations only.
+- [x] Validate and normalize AI responses before applying them.
+- [x] Apply valid board mutations through the same persistence path as manual frontend edits.
+- [x] Return both assistant text and optional board updates to the frontend.
 
 Tests
 - Unit tests for schema validation and malformed AI responses.

@@ -155,3 +155,81 @@ def test_ai_test_requires_api_key(client: TestClient) -> None:
     settings.openai_api_key = original_key
     assert response.status_code == 500
     assert response.json()["detail"] == "OPENAI_API_KEY is not configured."
+
+
+def test_ai_chat_requires_authentication(client: TestClient) -> None:
+    response = client.post("/api/ai/chat", json={"message": "Hello"})
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Authentication required"
+
+
+def test_ai_chat_requires_api_key(client: TestClient) -> None:
+    login(client)
+    original_key = settings.openai_api_key
+    settings.openai_api_key = ""
+
+    response = client.post("/api/ai/chat", json={"message": "Hello"})
+
+    settings.openai_api_key = original_key
+    assert response.status_code == 400
+    assert response.json()["detail"] == "OPENAI_API_KEY is not configured."
+
+
+def test_ai_chat_applies_board_changes_and_stores_history(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    login(client)
+    captured_history: list[dict[str, str]] = []
+
+    async def fake_ask_openai_json(*args, **kwargs):  # type: ignore[no-untyped-def]
+        return {
+            "model": "gpt-5.2",
+            "data": {
+                "reply": "I added the card.",
+                "operations": [
+                    {
+                        "action": "create",
+                        "column_id": "col-backlog",
+                        "card": {
+                            "id": "card-new",
+                            "title": "New task",
+                            "details": "Created by AI.",
+                        },
+                    }
+                ],
+            },
+        }
+
+    monkeypatch.setattr("backend.app.ai.ask_openai_json", fake_ask_openai_json)
+
+    response = client.post("/api/ai/chat", json={"message": "Add a new backlog card"})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["reply"] == "I added the card."
+    assert body["operations"][0]["action"] == "create"
+    assert "card-new" in body["board"]["cards"]
+
+    board_response = client.get("/api/board")
+    assert board_response.status_code == 200
+    assert "card-new" in board_response.json()["cards"]
+
+    async def fake_run_board_ai(*, conversation_history, **kwargs):  # type: ignore[no-untyped-def]
+        captured_history.extend(conversation_history)
+        return {
+            "model": "gpt-5.2",
+            "reply": "No new changes.",
+            "operations": [],
+            "board": board_response.json(),
+        }
+
+    monkeypatch.setattr("backend.app.main.run_board_ai", fake_run_board_ai)
+    follow_up = client.post("/api/ai/chat", json={"message": "What changed?"})
+
+    assert follow_up.status_code == 200
+    assert captured_history[-2:] == [
+        {"role": "user", "content": "Add a new backlog card"},
+        {"role": "assistant", "content": "I added the card."},
+    ]

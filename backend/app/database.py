@@ -195,3 +195,83 @@ def save_board(username: str, board: dict[str, Any], settings: Settings) -> dict
         )
         connection.commit()
         return board
+
+
+def get_column_by_id(board: dict[str, Any], column_id: str) -> dict[str, Any]:
+    for column in board["columns"]:
+        if column["id"] == column_id:
+            return column
+    raise ValueError(f"Column not found: {column_id}")
+
+
+def find_card_column(board: dict[str, Any], card_id: str) -> dict[str, Any]:
+    for column in board["columns"]:
+        if card_id in column["cardIds"]:
+            return column
+    raise ValueError(f"Card not found in any column: {card_id}")
+
+
+def apply_card_operations(board: dict[str, Any], operations: list[dict[str, Any]]) -> dict[str, Any]:
+    next_board = json.loads(json.dumps(board))
+
+    for operation in operations:
+        action = operation.get("action")
+
+        if action == "create":
+            card_id = operation["card"]["id"]
+            if card_id in next_board["cards"]:
+                raise ValueError(f"Card already exists: {card_id}")
+
+            column = get_column_by_id(next_board, operation["column_id"])
+            next_board["cards"][card_id] = operation["card"]
+            column["cardIds"].append(card_id)
+            continue
+
+        if action == "edit":
+            card_id = operation["card_id"]
+            card = next_board["cards"].get(card_id)
+            if not card:
+                raise ValueError(f"Card not found: {card_id}")
+
+            if "title" in operation:
+                card["title"] = operation["title"]
+            if "details" in operation:
+                card["details"] = operation["details"]
+            continue
+
+        if action == "move":
+            card_id = operation["card_id"]
+            target_column = get_column_by_id(next_board, operation["to_column_id"])
+            source_column = find_card_column(next_board, card_id)
+
+            source_column["cardIds"] = [
+                existing_card_id
+                for existing_card_id in source_column["cardIds"]
+                if existing_card_id != card_id
+            ]
+
+            insert_index = operation.get("position")
+            if isinstance(insert_index, int) and 0 <= insert_index <= len(target_column["cardIds"]):
+                target_column["cardIds"].insert(insert_index, card_id)
+            else:
+                target_column["cardIds"].append(card_id)
+            continue
+
+        if action == "delete":
+            card_id = operation["card_id"]
+            if card_id not in next_board["cards"]:
+                raise ValueError(f"Card not found: {card_id}")
+
+            column = find_card_column(next_board, card_id)
+            column["cardIds"] = [
+                existing_card_id
+                for existing_card_id in column["cardIds"]
+                if existing_card_id != card_id
+            ]
+            del next_board["cards"][card_id]
+            continue
+
+        raise ValueError(f"Unsupported card action: {action}")
+
+    validate_board_payload(next_board)
+    return next_board
