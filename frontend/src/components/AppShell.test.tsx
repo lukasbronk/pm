@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { AppShell } from "@/components/AppShell";
+import { initialData } from "@/lib/kanban";
 
 const fetchMock = vi.fn();
 
@@ -35,6 +36,10 @@ describe("AppShell", () => {
       .mockResolvedValueOnce({
         ok: true,
         json: async () => ({ authenticated: true, username: "user" }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => initialData,
       });
 
     render(<AppShell />);
@@ -53,6 +58,10 @@ describe("AppShell", () => {
       })
       .mockResolvedValueOnce({
         ok: true,
+        json: async () => initialData,
+      })
+      .mockResolvedValueOnce({
+        ok: true,
         json: async () => ({ authenticated: false, username: null }),
       });
 
@@ -63,5 +72,26 @@ describe("AppShell", () => {
     await waitFor(() => {
       expect(screen.getByRole("button", { name: "Sign In" })).toBeInTheDocument();
     });
+  });
+
+  it("loads the board from the backend session", async () => {
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ authenticated: true, username: "user" }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          ...initialData,
+          columns: initialData.columns.map((column, index) =>
+            index === 0 ? { ...column, title: "Ready" } : column
+          ),
+        }),
+      });
+
+    render(<AppShell />);
+
+    expect(await screen.findByText("Ready")).toBeInTheDocument();
   });
 });

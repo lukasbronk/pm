@@ -126,11 +126,11 @@ Success criteria
 
 ## Part 7: Frontend + Backend
 
-- [ ] Replace frontend in-memory initialization with API-backed board loading.
-- [ ] Persist column renames, card creation, card deletion, and drag-and-drop moves through the backend.
-- [ ] Add loading, saving, and error states that are minimal but clear.
-- [ ] Keep the UI responsive while writes occur.
-- [ ] Ensure refresh loads the persisted board state.
+- [x] Replace frontend in-memory initialization with API-backed board loading.
+- [x] Persist column renames, card creation, card deletion, and drag-and-drop moves through the backend.
+- [x] Add loading, saving, and error states that are minimal but clear.
+- [x] Keep the UI responsive while writes occur.
+- [x] Ensure refresh loads the persisted board state.
 
 Tests
 - Frontend integration tests with mocked API responses.

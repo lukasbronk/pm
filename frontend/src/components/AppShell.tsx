@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { KanbanBoard } from "@/components/KanbanBoard";
+import { initialData, type BoardData } from "@/lib/kanban";
 
 type SessionState = {
   authenticated: boolean;
@@ -15,9 +16,13 @@ const initialSessionState: SessionState = {
 
 export const AppShell = () => {
   const [session, setSession] = useState<SessionState | null>(null);
+  const [board, setBoard] = useState<BoardData | null>(null);
   const [formState, setFormState] = useState({ username: "user", password: "password" });
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoadingBoard, setIsLoadingBoard] = useState(false);
+  const [isSavingBoard, setIsSavingBoard] = useState(false);
+  const [boardError, setBoardError] = useState<string | null>(null);
 
   useEffect(() => {
     const loadSession = async () => {
@@ -30,6 +35,37 @@ export const AppShell = () => {
 
     void loadSession();
   }, []);
+
+  useEffect(() => {
+    if (!session?.authenticated) {
+      setBoard(null);
+      return;
+    }
+
+    const loadBoard = async () => {
+      setIsLoadingBoard(true);
+      setBoardError(null);
+
+      try {
+        const response = await fetch("/api/board", {
+          credentials: "same-origin",
+        });
+
+        if (!response.ok) {
+          setBoard(initialData);
+          setBoardError("Could not load the saved board.");
+          return;
+        }
+
+        const nextBoard = (await response.json()) as BoardData;
+        setBoard(nextBoard);
+      } finally {
+        setIsLoadingBoard(false);
+      }
+    };
+
+    void loadBoard();
+  }, [session]);
 
   const handleLogin = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -51,6 +87,7 @@ export const AppShell = () => {
 
       const nextSession = (await response.json()) as SessionState;
       setSession(nextSession);
+      setBoardError(null);
     } finally {
       setIsSubmitting(false);
     }
@@ -62,6 +99,35 @@ export const AppShell = () => {
       credentials: "same-origin",
     });
     setSession(initialSessionState);
+    setBoard(null);
+    setBoardError(null);
+  };
+
+  const handleBoardChange = async (nextBoard: BoardData) => {
+    setBoard(nextBoard);
+    setIsSavingBoard(true);
+    setBoardError(null);
+
+    try {
+      const response = await fetch("/api/board", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify(nextBoard),
+      });
+
+      if (!response.ok) {
+        setBoardError("Could not save the board.");
+        return;
+      }
+
+      const savedBoard = (await response.json()) as BoardData;
+      setBoard(savedBoard);
+    } catch {
+      setBoardError("Could not save the board.");
+    } finally {
+      setIsSavingBoard(false);
+    }
   };
 
   if (!session) {
@@ -135,5 +201,26 @@ export const AppShell = () => {
     );
   }
 
-  return <KanbanBoard username={session.username ?? "user"} onLogout={handleLogout} />;
+  if (isLoadingBoard || !board) {
+    return (
+      <main className="flex min-h-screen items-center justify-center px-6 py-12">
+        <div className="rounded-[32px] border border-[var(--stroke)] bg-white/90 px-8 py-10 shadow-[var(--shadow)]">
+          <p className="text-sm font-semibold uppercase tracking-[0.25em] text-[var(--gray-text)]">
+            Loading Board
+          </p>
+        </div>
+      </main>
+    );
+  }
+
+  return (
+    <KanbanBoard
+      board={board}
+      username={session.username ?? "user"}
+      onLogout={handleLogout}
+      onBoardChange={handleBoardChange}
+      isSaving={isSavingBoard}
+      error={boardError}
+    />
+  );
 };

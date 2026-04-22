@@ -7,6 +7,16 @@ test("loads the kanban board", async ({ page }) => {
   await expect(page.locator('[data-testid^="column-"]')).toHaveCount(5);
 });
 
+test("persists a renamed column after refresh", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Sign In" }).click();
+  const firstColumn = page.locator('[data-testid^="column-"]').first();
+  const titleInput = firstColumn.getByLabel("Column title");
+  await titleInput.fill("Ready");
+  await page.reload();
+  await expect(page.getByLabel("Column title").first()).toHaveValue("Ready");
+});
+
 test("adds a card to a column", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Sign In" }).click();
