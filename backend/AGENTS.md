@@ -4,14 +4,17 @@ This directory contains the local FastAPI backend for the project.
 
 ## Current Scope
 
-- Serve a placeholder HTML page from `/` during Part 2
+- Serve the frontend static export from `/`
 - Expose `/api/health` for local runtime verification
+- Handle local signed-cookie auth for the MVP
+- Persist one board per user in local SQLite
 - Load local configuration from the root `.env`
 - Bind to `127.0.0.1` by default
 
 ## Key Files
 
-- `backend/app/main.py`: FastAPI app and Part 2 routes
+- `backend/app/main.py`: FastAPI app, auth routes, and board API routes
+- `backend/app/database.py`: SQLite schema, board validation, and persistence helpers
 - `backend/app/settings.py`: local settings loaded from `.env`
 - `backend/tests/test_app.py`: backend route tests
 

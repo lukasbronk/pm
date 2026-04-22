@@ -6,6 +6,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from starlette.middleware.sessions import SessionMiddleware
 
+from backend.app.database import get_or_create_board, save_board
 from backend.app.settings import get_settings
 
 settings = get_settings()
@@ -29,8 +30,23 @@ class LoginPayload(BaseModel):
     password: str
 
 
+class BoardPayload(BaseModel):
+    columns: list[dict]
+    cards: dict
+
+
 def is_authenticated(request: Request) -> bool:
     return request.session.get(SESSION_USER_KEY) == VALID_USERNAME
+
+
+def require_username(request: Request) -> str:
+    username = request.session.get(SESSION_USER_KEY)
+    if username != VALID_USERNAME:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required",
+        )
+    return str(username)
 
 
 def render_placeholder_html() -> str:
@@ -174,6 +190,25 @@ async def login(payload: LoginPayload, request: Request) -> JSONResponse:
 async def logout(request: Request, response: Response) -> JSONResponse:
     request.session.clear()
     return JSONResponse({"authenticated": False, "username": None})
+
+
+@app.get("/api/board")
+async def get_board(request: Request) -> JSONResponse:
+    username = require_username(request)
+    return JSONResponse(get_or_create_board(username, settings))
+
+
+@app.put("/api/board")
+async def update_board(payload: BoardPayload, request: Request) -> JSONResponse:
+    username = require_username(request)
+    try:
+        board = save_board(username, payload.model_dump(), settings)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+    return JSONResponse(board)
 
 
 if FRONTEND_EXPORT_DIR.exists():

@@ -106,12 +106,12 @@ Success criteria
 
 ## Part 6: Backend
 
-- [ ] Implement database initialization on startup if the SQLite file does not exist.
-- [ ] Add backend storage helpers for reading and updating a user’s board JSON.
-- [ ] Add authenticated API routes for fetching the current board.
-- [ ] Add authenticated API routes for saving board updates.
-- [ ] Ensure the first login for a user can create a default board when missing.
-- [ ] Keep API shapes minimal and aligned with the frontend board model.
+- [x] Implement database initialization on startup if the SQLite file does not exist.
+- [x] Add backend storage helpers for reading and updating a user’s board JSON.
+- [x] Add authenticated API routes for fetching the current board.
+- [x] Add authenticated API routes for saving board updates.
+- [x] Ensure the first login for a user can create a default board when missing.
+- [x] Keep API shapes minimal and aligned with the frontend board model.
 
 Tests
 - Backend unit tests for database initialization and board CRUD behavior.
