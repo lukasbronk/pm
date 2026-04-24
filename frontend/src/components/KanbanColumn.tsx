@@ -2,7 +2,7 @@ import clsx from "clsx";
 import { useEffect, useRef, useState } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import type { Card, Column } from "@/lib/kanban";
+import type { Card, Column, ViewMode } from "@/lib/kanban";
 import { KanbanCard } from "@/components/KanbanCard";
 import { NewCardForm } from "@/components/NewCardForm";
 
@@ -12,9 +12,18 @@ type KanbanColumnProps = {
   onRename: (columnId: string, title: string) => void;
   onAddCard: (columnId: string, title: string, details: string) => void;
   onDeleteCard: (columnId: string, cardId: string) => void;
+  onUpdateCard: (
+    cardId: string,
+    updates: Partial<
+      Pick<Card, "workType" | "assigneeRole" | "effort" | "priority" | "blocked">
+    >
+  ) => void;
   onDeleteColumn: (columnId: string) => void;
   canDeleteColumn: boolean;
   autoFocusTitle?: boolean;
+  viewMode?: ViewMode;
+  zoneLabel?: string | null;
+  isHighlighted?: boolean;
 };
 
 export const KanbanColumn = ({
@@ -23,13 +32,18 @@ export const KanbanColumn = ({
   onRename,
   onAddCard,
   onDeleteCard,
+  onUpdateCard,
   onDeleteColumn,
   canDeleteColumn,
   autoFocusTitle = false,
+  viewMode = "classic",
+  zoneLabel = null,
+  isHighlighted = false,
 }: KanbanColumnProps) => {
   const { setNodeRef, isOver } = useDroppable({ id: column.id });
   const titleInputRef = useRef<HTMLInputElement | null>(null);
   const [isFresh, setIsFresh] = useState(autoFocusTitle);
+  const isArcadeMode = viewMode === "arcade";
 
   useEffect(() => {
     if (!autoFocusTitle) {
@@ -54,8 +68,10 @@ export const KanbanColumn = ({
     <section
       ref={setNodeRef}
       className={clsx(
-        "flex min-h-[520px] flex-col rounded-3xl border border-[var(--stroke)] bg-[var(--surface-strong)] p-4 shadow-[var(--shadow)] transition",
-        isOver && "ring-2 ring-[var(--accent-yellow)]"
+        "flex min-h-[520px] flex-col rounded-3xl border border-[var(--stroke)] bg-[var(--column-bg)] p-4 shadow-[var(--shadow)] transition",
+        isArcadeMode && "arcade-grid",
+        isOver && "ring-2 ring-[var(--accent-yellow)]",
+        isHighlighted && "draw-column-highlight"
       )}
       data-testid={`column-${column.id}`}
     >
@@ -63,7 +79,12 @@ export const KanbanColumn = ({
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-3">
             <div className="h-2 w-10 rounded-full bg-[var(--accent-yellow)]" />
-            <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--gray-text)]">
+            {zoneLabel ? (
+              <span className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--shell-muted)]">
+                {zoneLabel}
+              </span>
+            ) : null}
+            <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--shell-muted)]">
               {cards.length} cards
             </span>
           </div>
@@ -73,8 +94,8 @@ export const KanbanColumn = ({
             onChange={(event) => onRename(column.id, event.target.value)}
             placeholder="What am I called?"
             className={clsx(
-              "mt-3 w-full min-w-0 rounded-xl bg-transparent px-2 py-1 font-sans text-base font-semibold text-[var(--navy-dark)] outline-none transition",
-              "placeholder:text-[var(--gray-text)] focus:bg-[rgba(236,173,10,0.08)]",
+              "mt-3 w-full min-w-0 rounded-xl bg-transparent px-2 py-1 font-sans text-base font-semibold outline-none transition",
+              "text-[var(--shell-tone)] placeholder:text-[var(--shell-muted)] focus:bg-[var(--input-focus-bg)]",
               isFresh && "title-shimmer ring-2 ring-[var(--accent-yellow)]"
             )}
             aria-label="Column title"
@@ -84,7 +105,7 @@ export const KanbanColumn = ({
           type="button"
           onClick={() => onDeleteColumn(column.id)}
           disabled={!canDeleteColumn}
-          className="shrink-0 rounded-full border border-[var(--stroke)] px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--gray-text)] transition hover:text-[var(--navy-dark)] disabled:cursor-not-allowed disabled:opacity-50"
+          className="shrink-0 rounded-full border border-[var(--stroke)] px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--shell-muted)] transition hover:text-[var(--shell-tone)] disabled:cursor-not-allowed disabled:opacity-50"
           aria-label={`Delete ${column.title} column`}
         >
           Remove
@@ -97,17 +118,20 @@ export const KanbanColumn = ({
               key={card.id}
               card={card}
               onDelete={(cardId) => onDeleteCard(column.id, cardId)}
+              onUpdate={onUpdateCard}
+              viewMode={viewMode}
             />
           ))}
         </SortableContext>
         {cards.length === 0 && (
-          <div className="flex flex-1 items-center justify-center rounded-2xl border border-dashed border-[var(--stroke)] px-3 py-6 text-center text-xs font-semibold uppercase tracking-[0.2em] text-[var(--gray-text)]">
+          <div className="flex flex-1 items-center justify-center rounded-2xl border border-dashed border-[var(--stroke)] px-3 py-6 text-center text-xs font-semibold uppercase tracking-[0.2em] text-[var(--shell-muted)]">
             Drop a card here
           </div>
         )}
       </div>
       <NewCardForm
         onAdd={(title, details) => onAddCard(column.id, title, details)}
+        viewMode={viewMode}
       />
     </section>
   );

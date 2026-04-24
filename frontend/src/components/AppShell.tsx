@@ -3,7 +3,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { AiSidebar } from "@/components/AiSidebar";
 import { KanbanBoard } from "@/components/KanbanBoard";
-import { initialData, type BoardData } from "@/lib/kanban";
+import { initialData, normalizeBoardData, type BoardData } from "@/lib/kanban";
 
 type SessionState = {
   authenticated: boolean;
@@ -67,7 +67,7 @@ export const AppShell = () => {
           return;
         }
 
-        const nextBoard = (await response.json()) as BoardData;
+        const nextBoard = normalizeBoardData((await response.json()) as BoardData);
         setBoard(nextBoard);
       } finally {
         setIsLoadingBoard(false);
@@ -160,7 +160,7 @@ export const AppShell = () => {
         return;
       }
 
-      const savedBoard = (await response.json()) as BoardData;
+      const savedBoard = normalizeBoardData((await response.json()) as BoardData);
       setBoard(savedBoard);
     } catch {
       setBoardError("Could not save the board.");
@@ -195,7 +195,7 @@ export const AppShell = () => {
       }
 
       if (data.board) {
-        setBoard(data.board);
+        setBoard(normalizeBoardData(data.board));
       }
 
       setMessages((prev) => [
@@ -307,6 +307,7 @@ export const AppShell = () => {
         isSending={isSendingAi}
         error={aiError}
         onSend={handleSendAiMessage}
+        viewMode={board.viewMode}
       />
     </KanbanBoard>
   );

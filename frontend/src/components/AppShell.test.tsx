@@ -107,6 +107,40 @@ describe("AppShell", () => {
     expect(await screen.findByText("Ready")).toBeInTheDocument();
   });
 
+  it("persists the selected board mode through save", async () => {
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ authenticated: true, username: "user" }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => initialData,
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ messages: [] }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ ...initialData, viewMode: "arcade" }),
+      });
+
+    render(<AppShell />);
+
+    await userEvent.click(await screen.findByRole("button", { name: "arcade" }));
+
+    expect(await screen.findByRole("heading", { name: "Questboard" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Game Master" })).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      "/api/board",
+      expect.objectContaining({
+        method: "PUT",
+        body: expect.stringContaining('"viewMode":"arcade"'),
+      })
+    );
+  });
+
   it("sends an AI message and updates the board", async () => {
     fetchMock
       .mockResolvedValueOnce({

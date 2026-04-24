@@ -94,6 +94,15 @@ def test_board_is_created_automatically_and_db_file_exists(
     assert response.status_code == 200
     board = response.json()
     assert len(board["columns"]) >= 1
+    assert board["viewMode"] == "classic"
+    assert board["themeId"] == "core"
+    assert board["playerProfile"]["primaryRole"] == "product"
+    assert board["drawSettings"]["sourceColumnId"] == "col-backlog"
+    assert board["drawSettings"]["targetColumnId"] == "col-discovery"
+    assert board["runState"]["redrawsRemaining"] == 1
+    assert board["cards"]["card-1"]["workType"] == "product"
+    assert board["cards"]["card-1"]["blocked"] is False
+    assert board["cards"]["card-1"]["drawState"]["lastDrawnAt"] is None
     assert "card-1" in board["cards"]
     assert (tmp_path / "pm.sqlite3").exists()
 
@@ -102,14 +111,33 @@ def test_board_update_persists_for_authenticated_user(client: TestClient) -> Non
     login(client)
     initial_board = client.get("/api/board").json()
     initial_board["columns"][0]["title"] = "Ready"
+    initial_board["viewMode"] = "arcade"
+    initial_board["playerProfile"]["primaryRole"] = "design"
+    initial_board["drawSettings"]["sourceColumnId"] = "col-discovery"
+    initial_board["drawSettings"]["targetColumnId"] = "col-progress"
+    initial_board["runState"]["redrawsRemaining"] = 0
+    initial_board["cards"]["card-1"]["blocked"] = True
+    initial_board["cards"]["card-1"]["drawState"]["lastDrawnAt"] = "2026-04-22T10:00:00.000Z"
 
     update_response = client.put("/api/board", json=initial_board)
     assert update_response.status_code == 200
     assert update_response.json()["columns"][0]["title"] == "Ready"
+    assert update_response.json()["viewMode"] == "arcade"
+    assert update_response.json()["playerProfile"]["primaryRole"] == "design"
+    assert update_response.json()["drawSettings"]["sourceColumnId"] == "col-discovery"
+    assert update_response.json()["drawSettings"]["targetColumnId"] == "col-progress"
+    assert update_response.json()["runState"]["redrawsRemaining"] == 0
+    assert update_response.json()["cards"]["card-1"]["blocked"] is True
 
     reload_response = client.get("/api/board")
     assert reload_response.status_code == 200
     assert reload_response.json()["columns"][0]["title"] == "Ready"
+    assert reload_response.json()["viewMode"] == "arcade"
+    assert reload_response.json()["playerProfile"]["primaryRole"] == "design"
+    assert reload_response.json()["drawSettings"]["sourceColumnId"] == "col-discovery"
+    assert reload_response.json()["drawSettings"]["targetColumnId"] == "col-progress"
+    assert reload_response.json()["runState"]["redrawsRemaining"] == 0
+    assert reload_response.json()["cards"]["card-1"]["drawState"]["lastDrawnAt"] == "2026-04-22T10:00:00.000Z"
 
 
 def test_invalid_board_payload_is_rejected(client: TestClient) -> None:
@@ -134,6 +162,18 @@ def test_variable_column_count_is_accepted(client: TestClient) -> None:
 
     assert response.status_code == 200
     assert len(response.json()["columns"]) == 6
+
+
+def test_invalid_draw_settings_are_normalized(client: TestClient) -> None:
+    login(client)
+    board = client.get("/api/board").json()
+    board["drawSettings"]["targetColumnId"] = board["drawSettings"]["sourceColumnId"]
+
+    response = client.put("/api/board", json=board)
+
+    assert response.status_code == 200
+    assert response.json()["drawSettings"]["sourceColumnId"] == "col-backlog"
+    assert response.json()["drawSettings"]["targetColumnId"] == "col-discovery"
 
 
 def test_database_contains_user_and_board_rows(client: TestClient, tmp_path: Path) -> None:

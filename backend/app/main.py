@@ -34,6 +34,11 @@ class LoginPayload(BaseModel):
 
 
 class BoardPayload(BaseModel):
+    viewMode: str | None = None
+    themeId: str | None = None
+    playerProfile: dict | None = None
+    drawSettings: dict | None = None
+    runState: dict | None = None
     columns: list[dict]
     cards: dict
 
