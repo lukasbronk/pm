@@ -283,7 +283,7 @@ def test_ai_chat_applies_board_changes_and_stores_history(
             "board": board_response.json(),
         }
 
-    monkeypatch.setattr("backend.app.main.run_board_ai", fake_run_board_ai)
+    monkeypatch.setattr("backend.app.ai_routes.run_board_ai", fake_run_board_ai)
     follow_up = client.post("/api/ai/chat", json={"message": "What changed?"})
 
     assert follow_up.status_code == 200

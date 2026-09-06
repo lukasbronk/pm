@@ -1,3 +1,4 @@
+import copy
 import json
 import sqlite3
 from pathlib import Path
@@ -296,7 +297,6 @@ def initialize_database(settings: Settings) -> None:
 
 
 def get_connection(settings: Settings) -> sqlite3.Connection:
-    initialize_database(settings)
     connection = sqlite3.connect(settings.db_path)
     connection.row_factory = sqlite3.Row
     connection.execute("PRAGMA foreign_keys = ON")
@@ -305,19 +305,16 @@ def get_connection(settings: Settings) -> sqlite3.Connection:
 
 def get_or_create_user_id(username: str, settings: Settings) -> int:
     with get_connection(settings) as connection:
-        existing = connection.execute(
-            "SELECT id FROM users WHERE username = ?",
-            (username,),
-        ).fetchone()
-        if existing:
-            return int(existing["id"])
-
-        cursor = connection.execute(
-            "INSERT INTO users (username) VALUES (?)",
+        connection.execute(
+            "INSERT INTO users (username) VALUES (?) ON CONFLICT(username) DO NOTHING",
             (username,),
         )
         connection.commit()
-        return int(cursor.lastrowid)
+        row = connection.execute(
+            "SELECT id FROM users WHERE username = ?",
+            (username,),
+        ).fetchone()
+        return int(row["id"])
 
 
 def get_or_create_board(username: str, settings: Settings) -> dict[str, Any]:
@@ -483,7 +480,7 @@ def find_card_column(board: dict[str, Any], card_id: str) -> dict[str, Any]:
 
 
 def apply_card_operations(board: dict[str, Any], operations: list[dict[str, Any]]) -> dict[str, Any]:
-    next_board = json.loads(json.dumps(normalize_board_payload(board)))
+    next_board = copy.deepcopy(normalize_board_payload(board))
 
     for operation in operations:
         action = operation.get("action")
